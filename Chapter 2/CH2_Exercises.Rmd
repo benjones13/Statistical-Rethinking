@@ -1,0 +1,39 @@
+---
+title: "CH2_Practice"
+author: "Ben Jones"
+date: "4 February 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+*2E1:*
+(2) & (4)
+
+*2E2:*
+(3)
+
+*2E3:*
+(1), by definition.
+Also (4), by Bayes theorem
+
+*2E4:*
+What de finetti meant was likely that probability is simply a metric for expressing uncertainty regarding an outcome given the available information, and that this probability can change in light of new information. With regard to the statement "the probability of water is 0.7", what we are saying is that given our observations with the globe tossing exercise, alongside any prior information we have, our best guess of the proportion of the earth's surface covered in water is 0.7, although if we were to obtain more information this estimate could change.
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
