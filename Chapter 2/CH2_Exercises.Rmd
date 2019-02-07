@@ -2,7 +2,7 @@
 title: "CH2_Practice"
 author: "Ben Jones"
 date: "4 February 2019"
-output: html_document
+output: rmarkdown::github_document
 ---
 
 ```{r setup, include=FALSE}
