@@ -2,7 +2,7 @@
 title: "CH2_Practice"
 author: "Ben Jones"
 date: "4 February 2019"
-output: rmarkdown::github_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -24,16 +24,123 @@ Also (4), by Bayes theorem
 *2E4:*
 What de finetti meant was likely that probability is simply a metric for expressing uncertainty regarding an outcome given the available information, and that this probability can change in light of new information. With regard to the statement "the probability of water is 0.7", what we are saying is that given our observations with the globe tossing exercise, alongside any prior information we have, our best guess of the proportion of the earth's surface covered in water is 0.7, although if we were to obtain more information this estimate could change.
 
+*2M1:*
+i)
 ```{r cars}
-summary(cars)
+p_grid = seq(0,1,length.out = 20)
+prior = rep(1,20)
+likelihood = dbinom(3,size = 3, prob = p_grid)
+unstd.posterior = likelihood * prior
+posterior = unstd.posterior/sum(unstd.posterior)
+plot(p_grid, posterior, type = "b", xlab = "Probability of Water", ylab = "posterior probability")
+```
+ii)
+```{r}
+p_grid2 = seq(0,1,length.out = 20)
+prior2 = rep(1,20)
+likelihood2 = dbinom(3,size = 4, prob = p_grid)
+unstd.posterior2 = likelihood2 * prior2
+posterior2 = unstd.posterior2/sum(unstd.posterior2)
+plot(p_grid2, posterior2, type = "b", xlab = "Probability of Water", ylab = "posterior probability")
+```
+iii)
+```{r}
+p_grid3 = seq(0,1,length.out = 20)
+prior3 = rep(1,20)
+likelihood3 = dbinom(5,size = 7, prob = p_grid)
+unstd.posterior3 = likelihood3 * prior3
+posterior3 = unstd.posterior3/sum(unstd.posterior3)
+plot(p_grid3, posterior3, type = "b", xlab = "Probability of Water", ylab = "posterior probability")
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+*2M2:*
+i)
+```{r}
+p_grid4 = seq(0,1,length.out = 20)
+prior4 = ifelse(p_grid4< 0.5,0,1)
+likelihood4 = dbinom(3,size = 3, prob = p_grid)
+unstd.posterior4 = likelihood4 * prior4
+posterior4 = unstd.posterior4/sum(unstd.posterior4)
+plot(p_grid4, posterior4, type = "b", xlab = "Probability of Water", ylab = "posterior probability")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+ii)
+```{r}
+p_grid5 = seq(0,1,length.out = 20)
+prior5 = ifelse(p_grid4< 0.5,0,1)
+likelihood5 = dbinom(3,size = 4, prob = p_grid)
+unstd.posterior5 = likelihood5 * prior5
+posterior5 = unstd.posterior5/sum(unstd.posterior5)
+plot(p_grid5, posterior5, type = "b", xlab = "Probability of Water", ylab = "posterior probability")
+```
+
+iii)
+```{r}
+p_grid6 = seq(0,1,length.out = 20)
+prior6 = ifelse(p_grid4< 0.5,0,1)
+likelihood6 = dbinom(5,size = 7, prob = p_grid)
+unstd.posterior6 = likelihood6 * prior6
+posterior6 = unstd.posterior6/sum(unstd.posterior6)
+plot(p_grid6, posterior6, type = "b", xlab = "Probability of Water", ylab = "posterior probability")
+```
+
+*2M3:*
+$P(Land|Earth) = 0.3$ and $P(Earth) = 0.5$, as given. Then as Mars is $100\%$ land and Earth is $30\%$ land, $P(Land) = 0.15$. The by Bayes' Theorem,
+
+$$(Earth|Land) = \frac{P(Land|Earth)P(Earth)}{P(Land)} = \frac{0.3 \times 0.5}{0.15} = 0.23$$
+*2M4:*
+There are $3 \times 2 = 6$ scenarios in which a card is pulled, of which three will produce a black side first (drawing either side of the double black and the black side of the black/white card.) Of these three, two will be black on the other side, and therefore the probability that the second side is black is $\frac{2}{3}$
+
+*2M5:*
+There are now $2 \times 4 = 8$ possibilities, of which six can realise a black on the first draw. Of these, four will display a black on the other side. Therefore the probability is now $\frac{4}{5}$.
+
+*2M6:*
+There are now 12 ways to pull cards from the deck, of which four will show a black on the first side. Of these, two will also show a black on the second side, the probability that the card is black on both sides is $\frac{2}{4} = 0.5$
+
+*2M7:*
+After pulling a black sided card first, there are 8 ways to then pull a second card, six of which arw white and two are black. All six of the white scenarios can result in a black on the second side of the first card, and both black scenarios results in a white on the second side of the first card. Therefore the probability is $\frac{6}{8} = 0.75$
+
+*2H1:*
+We first must calculate the posterior of having twins at the first stage, which can then be  used as the prior for the second stage
+
+```{r}
+likelihood <- c(0.1,0.2)
+prior <- c(1,1)
+unstd.posterior = likelihood * prior
+posterior = unstd.posterior/sum(unstd.posterior)
+
+#result
+sum(posterior * likelihood)
+```
+
+*2H2:*
+By Bayes' theorem, 
+$$P(A|Twin) = \frac{P(Twin|A)P(A)}{P(Twin)} = \frac{0.1 \times 0.5}{0.15} = 0.33$$
+
+*2H3:*
+```{r}
+likelihood <- c(0.1,0.2)
+prior <- c(1,1)
+unstd.posterior = likelihood * prior
+posterior = unstd.posterior/sum(unstd.posterior)
+
+#result
+likelihood2 <- c(0.9,0.8)
+unstd.posterior2 <- posterior * likelihood2
+posterior2 <- unstd.posterior2/sum(unstd.posterior2)
+posterior2[1]
+```
+
+*2H4:**
+```{r}
+likelihood <- c(0.8,1-0.65)
+prior = c(1,1)
+unstd.posterior <- likelihood * prior
+posterior <- unstd.posterior/sum(unstd.posterior)
+posterior[1]
+
+#p2
+
+posterior.unstd.new <- posterior2 * posterior #(from 2H3)
+posterior.new <- posterior.unstd.new/sum(posterior.unstd.new)
+posterior.unstd.new 
