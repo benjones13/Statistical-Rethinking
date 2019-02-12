@@ -1,0 +1,180 @@
+---
+title: "CH3_Exercises"
+author: "Ben Jones"
+date: "12 February 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(rethinking)
+```
+
+```{r}
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+prior <- rep(1,1000)
+likelihood <- dbinom(6, size = 9, prob = p_grid)
+posterior <- likelihood * prior
+posterior <- posterior/sum(posterior)
+set.seed (100)
+samples <- sample(p_grid, prob = posterior, size = 1e4, replace = TRUE)
+```
+
+*3E1:*
+```{r}
+sum(samples<0.2)/length(samples)
+```
+
+*3E2:*
+```{r}
+sum(samples > 0.8)/length(samples)
+```
+
+*3E3:*
+```{r}
+sum(samples > 0.2 & samples< 0.8)/length(samples)
+```
+
+*3E4:*
+```{r}
+quantile(samples, probs = 0.2)
+```
+
+*3E5:*
+```{r}
+quantile(samples,0.8)
+```
+
+*3E6:*
+```{r}
+HPDI(samples,0.66)
+```
+
+*3E7:*
+```{r}
+PI(samples, 0.66)
+#or
+quantile(samples, c((1-0.66)/2, 1-(1-0.66)/2))
+```
+
+*3M1:*
+
+```{r}
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+prior = rep(1,1000)
+likelihood <- dbinom(8, size = 15, prob = p_grid)
+posterior <- likelihood * prior
+posterior <- posterior/sum(posterior)
+```
+
+*3M2:*
+```{r}
+samples <- sample(p_grid, prob = posterior, size = 1e4, replace = T)
+HPDI(samples, prob = 0.9)
+```
+
+*3M3:*
+```{r}
+dummy <- rbinom(1e5, size = 15, prob = samples)
+sum(dummy == 8)/length(dummy)
+```
+
+*3M4:*
+```{r}
+posterior.new <- rbinom(1e5, size = 9, prob = samples)
+sum(posterior.new == 6)/length(posterior.new)
+```
+
+*3M5:* 
+1)
+```{r}
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+prior = ifelse(p_grid < 0.5, 0, 1)
+likelihood <- dbinom(8, size = 15, prob = p_grid)
+posterior2 <- likelihood * prior
+posterior2 <- posterior2/sum(posterior2)
+
+```
+2)
+```{r}
+samples2 <- sample(p_grid, prob = posterior2, size = 1e4, replace = T)
+HPDI(samples2, prob = 0.9)
+```
+3)
+```{r}
+dummy <- rbinom(1e5, size = 15, prob = samples2)
+sum(dummy == 8)/length(dummy)
+```
+4)
+```{r}
+posterior.new <- rbinom(1e5, size = 9, prob = samples2)
+sum(posterior.new == 6)/length(posterior.new)
+```
+
+We can compare the posterior point estimates in order to understand which approach may be preferable:
+```{r}
+median(samples)
+mean(samples)
+median(samples2)
+mean(samples2)
+```
+which suggest that adding prior information improves the point estimate of the true probability $p$, as expected, as both the mean and median move closer to the true value of $p=0.7$. By removing all density in $p<0.5$, more certainty can be obtained by the estimate as can be seen from the highest posterior density intervals, which are narrower with an informative prior.
+
+*3H1:*
+```{r}
+library(rethinking)
+data(homeworkch3)
+birthtotal <- sum(birth1) + sum(birth2)
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+prior <- rep(1,1000)
+likelihood = dbinom(birthtotal, size = 200, prob = p_grid)
+posterior <- likelihood * prior
+posterior <- posterior/sum(posterior)
+p_grid[which.max(posterior)]
+```
+*3H2:*
+
+
+```{r}
+samples <- sample(p_grid, prob = posterior, size = 1e4, replace = T )
+mean(samples)
+median(samples)
+HPDI(samples,0.5)
+HPDI(samples,0.89)
+HPDI(samples,0.97)
+```
+
+*3H3:*
+```{r}
+sim <- rbinom(1e4, size = 200, prob = samples)
+simplehist(sim)
+mean(sim)
+median(sim)
+dens(sim)
+abline(v=111)
+```
+From the results above, it looks like the model fits the data well with the estimated number of male births very close to the true value of 111.
+
+*3H4:*
+```{r}
+(nboys1 <- sum(birth1))
+bsample1 <- rbinom(1e4, size = 100, prob = samples)
+median(bsample1)
+mean(bsample1)
+```
+Here the model slightly overestimates the number of boys fro first births
+
+```{r}
+(girls1 <- sum(birth1 == 0))
+(boysaftergirls <- sum(birth2[birth1 == 0]))
+
+sim2 <- rbinom(1e4, size = girls1, prob = samples)
+mean(sim2)
+median(sim2)
+dens(sim2)
+simplehist(sim2)
+```
+
+The model substantially underestimates the  number of boys born after the first girl, which suggets that the gender of the two births are not independent.
