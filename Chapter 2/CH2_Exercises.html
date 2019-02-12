@@ -211,19 +211,21 @@ unstd.posterior2 &lt;- posterior * likelihood2
 posterior2 &lt;- unstd.posterior2/sum(unstd.posterior2)
 posterior2[1]</code></pre>
 <pre><code>## [1] 0.36</code></pre>
-<p>*2H4:**</p>
+<p><em>2H4:</em> p1</p>
 <pre class="r"><code>likelihood &lt;- c(0.8,1-0.65)
 prior = c(1,1)
 unstd.posterior &lt;- likelihood * prior
 posterior &lt;- unstd.posterior/sum(unstd.posterior)
 posterior[1]</code></pre>
 <pre><code>## [1] 0.6956522</code></pre>
-<pre class="r"><code>#p2
-
-posterior.unstd.new &lt;- posterior2 * posterior
-posterior.new &lt;- posterior.unstd.new/sum(posterior.unstd.new)
-posterior.unstd.new</code></pre>
-<pre><code>## [1] 0.2504348 0.1947826</code></pre>
+<p>p2 We need to calculate <span class="math display">\[\begin{align*}
+P(A|Test = A, twins1, single2) &amp;= \frac{P(test = A|Species = A) \times P(twins1|Species = A) \times P(single2|Species = A * P(Species = A))}{P(test = A, twins1, single2)} \\
+P(test = A, twins1, single2) &amp;= P(test = A|Species = A) * P(twins1 | species = A) * P(single2 | species = A) * P(Species = A) 
+\\&amp;+ P(test = A|Species = B) * P(twins1 | species = B) * P(single2 | species = B) * P(Species = B) \\
+&amp;\iff \frac{0.8 \times 0.1 \times 0.9 \times 0.5}{0.8 \times 0.1 \times 0.9 \times 0.5  + 0.35 \times 0.2 \times 0.8 \times 0.5}
+\end{align*}\]</span></p>
+<pre class="r"><code>(0.8*0.1*0.9*0.5)/(0.8*0.1*0.9*0.5 + 0.35 * 0.2 * 0.8 * 0.5)</code></pre>
+<pre><code>## [1] 0.5625</code></pre>
 </div>
 
 
