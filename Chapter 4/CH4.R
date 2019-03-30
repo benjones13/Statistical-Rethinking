@@ -285,3 +285,111 @@ plot(height ~ weight, data = d2, col = col.alpha(rangi2, 0.5))
 lines(weight.seq, mu.mean)
 
 shade(mu.HPDI, weight.seq)
+
+##4.58##
+post <- extract.samples(m4.3)
+mu.link <- function(weight) post$a + post$b * weight
+weight.seq <- seq(from = 25, to = 70, by = 1)
+mu <- sapply(weight.seq, mu.link)
+mu.mean <- apply(mu, 2, mean)
+mu.HPDI <- apply(mu, 2 , HPDI, prob = 0.89)
+
+##4.59##
+sim.height <- sim(m4.3, data = list(weight = weight.seq))
+str(sim.height)
+
+##4.60##
+height.PI <- apply(sim.height, 2, PI, prob = 0.89)
+
+##4.61##
+#plt raw data
+plot(height ~ weight, d2, col = col.alpha(rangi2,0.5))
+
+#draw MAP line
+lines(weight.seq, mu.mean)
+
+#draw HPDI region for line
+shade(mu.HPDI, weight.seq)
+
+#draw PI region for simulated data
+shade(height.PI, weight.seq)
+
+##4.62##
+sim.height <- sim(m4.3, data = list(weight = weight.seq), n = 1e4)
+height.PI <- apply(sim.height, 2, PI, 0.89)
+
+##4.63##
+post <- extract.samples(m4.3)
+weight.seq <- 25:70
+sim.height <- sapply(weight.seq, function(weight)
+  rnorm(
+    n = nrow(post),
+    mean = post$a + post$b * weight,
+    sd = post$sigma ) )
+height.PI <- apply(sim.height, 2, PI, prob = 0.89)
+  
+##4.64##
+library(rethinking)
+data(Howell1)
+d <- Howell1
+str(d)
+plot(height~weight, d)
+
+##4.65##
+d$weight.s <- (d$weight - mean(d$weight))/sd(d$weight)
+plot(height~weight.s,d)
+
+##4.66#'
+d$weight.s2 <- d$weight.s^2
+m4.5 <- map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b1*weight.s + b2*weight.s2,
+    a ~ dnorm(178, 100),
+    b1 ~ dnorm(0, 10),
+    b2 ~ dnorm(0, 10),
+    sigma ~ dunif(0, 50)
+  ),
+  data = d
+)
+
+##4.67##
+precis(m4.5)
+
+##4.68##
+weight.seq <- seq(from = -2.2, to = 2, length.out = 30)
+pred_dat <- list(weight.s = weight.seq, weight.s2 = weight.seq^2)
+mu <- link(m4.5, data = pred_dat)
+mu.mean <- apply(mu, 2, mean)
+mu.PI <- apply(mu, 2, PI, prob = 0.89)
+sim.height <- sim(m4.5, data = pred_dat)
+height.PI <- apply(sim.height, 2, PI, prob = 0.89)
+
+##4.69##
+plot(height~weight.s, d, col = col.alpha(rangi2, 0.5))
+lines(weight.seq,mu.mean)
+shade(mu.PI, weight.seq)
+shade(height.PI, weight.seq)
+
+##4.70##
+d$weight.s3 <- d$weight.s^3
+m4.6 <- map(
+  alist(
+    height ~ dnorm(mu, sigma) ,
+    mu <- a + b1*weight.s + b2*weight.s2 + b3*weight.s3,
+    a ~ dnorm(178, 100), 
+    b1 ~ dnorm(0, 10), 
+    b2 ~ dnorm(0 , 10), 
+    b3 ~ dnorm(0, 10),
+    sigma ~ dunif(0, 50)
+  ),
+  data = d
+)
+
+##4.71##
+plot(height ~ weight.s,  d, col=col.alpha(rangi2,0.5), xaxt = "n")
+
+##4.72##
+at <- c(-2,-1,0,1,2)
+labels <- at * sd(d$weight) + mean(d$weight)
+axis(side = 1, at = at, labels = round(labels,1))

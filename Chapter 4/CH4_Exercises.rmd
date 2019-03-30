@@ -1,0 +1,179 @@
+---
+title: "CH4_Exercises"
+author: "Ben Jones"
+date: "30 March 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(rethinking)
+```
+
+*4E1
+The first line is the likelihood, the lower two are the priors
+
+*4E2
+Two parameters, $\mu$ and $\sigma$
+
+*4E3
+$$
+P(\mu, \sigma|y_i) = \frac{\prod_i N(y_i|\mu, sigma) N(\mu|0,10) \mbox{Unif}(\sigma|0,10)}{\int \int \prod_i N(y_i|\mu, sigma) N(\mu|0,10) \mbox{Unif}(\sigma|0,10) d\mu d\sigma }
+$$
+
+*4E4
+The second line is the linear model, describing the relationship between $y$ and $x$
+
+*4E5
+There are three parameters, $\alpha$, $\beta$ and $\sigma$
+
+*4M1
+Simulate from $\mu$ and $\sigma$, and subsequently from $y$
+```{r}
+mu <- rnorm(1000,0,10)
+sigma <- runif(1000, 0, 10)
+y <- rnorm(1000, mu, sigma)
+dens(y)
+```
+
+*4M2
+```{r}
+model <-  alist(
+    y ~ dnorm(mu, sigma),
+    mu ~ dnorm(0, 10),
+    sigma ~ dunif(0, 10)
+)
+```
+
+*4M3
+$$
+y_i \sim \mbox{Normal}(\mu_i,\sigma) \\
+\mu_i = \alpha  + \beta x_i \\
+\alpha \sim \mbox{Normal}(0, 50) \\
+\sigma \sim \mbox{Uniform}(0, 50)
+$$
+
+*4M4
+Let $y_i$ denote height and $x_i$ denote year. Then the model is
+$$
+y_i \sim \mbox{Normal}(\mu_i, \sigma) \\
+\sigma = \alpha + \beta x_i \\
+\alpha \sim \mbox{Normal}(0,200) \\
+\beta \sim \mbox{Normal}(10,50)\\
+\sigma \sim \mbox{Uniform(0,50)}
+$$
+We Do not know anything about the age of students - they could be university students or primary school kids. Therefore we set a prior for alpha, which is height at year 0, as very wide but necessarily positive. We set a wide prior for $\beta$ as we don't know anything about the influence of time on height, but make it positive as we expect it to increase.
+
+*4M5
+Yes, we would centre alpha at 120 and reduce the SD to reflect the additional certainty. We would leave the mean of $\beta$ the same as we have already specidied it as positive, but would reduce the SD to reflect the uncertainty. We would leave $\sigma$ unchanged as we still do not know how much variability there is in the heights.
+
+*4M6
+I would set the upper limit of the $\sigma$ uniform prior to 64 to reflect this additional knowledge.
+
+*4H1
+```{r}
+data(Howell1)
+data <- Howell1
+model <-  map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- alpha + beta*weight,
+    alpha ~ dnorm(0,200),
+    beta ~ dnorm(10,50),
+    sigma ~ dunif(0, 200)
+  ),
+  data = data
+)
+model
+```
+
+We now have the best parameter estimates for the model. Saving new weights as a vector and using the link function will allow us to estimate heights based on these.
+
+```{r}
+weight_new <- c(46.95,43.72, 64.78, 32.59,54.63)
+predictions <- link(model, data = data.frame(weight = weight_new))
+expected <- apply(predictions,  2, mean)
+HPDI <- apply(predictions, 2, HPDI, prob = 0.89)
+expected
+HPDI
+data.frame(Individual = 1:5,
+           Weight = weight_new,
+           expected = expected,
+           Lower = HPDI[1,],
+           Higher = HPDI[2,] )
+```
+
+
+*4H2
+Extract only data below  18 years.
+```{r}
+data2 <- data[data$age < 18,]
+```
+
+(a)
+```{r}
+model2 <-  map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- alpha + beta*weight,
+    alpha ~ dnorm(0,200),
+    beta ~ dnorm(10,50),
+    sigma ~ dunif(0, 200)
+  ),
+  data = data2
+)
+precis(model2)
+```
+
+The model predicts a $\beta$ of 2.72, (89% HPDI: 2.61,2.83) suggesting that a one unit increase in weight will result in a 2.72 increase in height. So an increase of 10 units in weight will result in an expected increase in height of 27.2cm. The estimate of $\sigma$ suggests that the standard deviation of heights is 8.44.
+
+(b)
+We plot the data along with the regression line and 89\% HPDI.
+
+```{r}
+weight.seq <- seq(min(data2$weight),max(data2$weight), by = 0.5)
+mu <- link(model2,data = data.frame(weight = weight.seq))
+mu.mean <- apply(mu, 2, mean)
+mu.HPDI <- apply(mu, 2, HPDI, prob = 0.89)
+plot(height~weight, data = data2)
+lines(weight.seq,mu.mean)
+shade(mu.HPDI,weight.seq)
+sim.height <- sim(model2, data = list(weight = weight.seq), n=1e4)
+HPDI.height <- apply(sim.height, 2, HPDI, prob = 0.89)
+shade(HPDI.height, weight.seq)
+```
+
+(c) 
+The relationship between height and weight does not appear to be linear. Further, at upper and lower weights the model does not appear to  be predicting height very well, with some data points falling outside of  the 89% HPDI. A better model may be polynomial of order two, although this creates difficulty with interpretation.
+
+*4H3
+```{r}
+model3 <-  map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- alpha + beta*log(weight),
+    alpha ~ dnorm(178,100),
+    beta ~ dnorm(0,100),
+    sigma ~ dunif(0, 50)
+  ),
+  data = data
+)
+precis(model3)
+```
+
+This suggests that a unit increase in log weight will increase height by 47.08. 
+```{r}
+weight.seq <- seq(min(data$weight),max(data$weight),by=0.5)
+mu <- link(model3,data = data.frame(weight = weight.seq))
+mu.mean <- apply(mu, 2, mean)
+mu.HPDI <- apply(mu, 2, HPDI, prob = 0.97)
+plot(height~weight, data = data, col = col.alpha(rangi2,0.4))
+lines(weight.seq,mu.mean)
+shade(mu.HPDI,weight.seq)
+sim.height <- sim(model3, data = list(weight = weight.seq), n=1e4)
+HPDI.height <- apply(sim.height, 2, HPDI, prob = 0.97)
+shade(HPDI.height, weight.seq)
+```
+This model appears to better fit the data.
