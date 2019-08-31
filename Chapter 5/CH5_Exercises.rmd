@@ -1,0 +1,216 @@
+---
+title: "CH5_Exercises"
+author: "Ben Jones"
+date: "30 August 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(rethinking)
+```
+
+*5E1
+(2), (3) and 4, models (1) only has one predictor
+
+*5E2
+
+$$
+\mu_i = \alpha + \beta_A * x_{i,A} + \beta_P x_{i,P}
+$$
+where $x_{i,A}$ and $x_{i,P}$ are animal and plant diversity.
+
+*5E3
+$$
+\mu_i = \alpha + \beta_fund * x_{i, fund} + \beta_{size}x_{i,size}
+$$
+Both parameters should have positive slopes - increasing either increases time to PhD.
+
+*5E4
+(1), (3), (4), (5) - model two includes all indicators and so is not identifiable.
+
+*5M1
+```{r}
+x1 <- rnorm(100,2,2)
+x2 <- rnorm(100,0.85*x1+2,sqrt(1-0.85^2))
+y <- rnorm(100, 4 +1.5 * x1 + 1.2 * x2, 2)
+l <- lm(y ~ x2 )
+summary(l)
+l2<- lm(y~x1+x2)
+summary(l2)
+```
+
+*5M2
+```{r}
+x1 <- rnorm(100)
+x2 <- rnorm(100, 0.85*x1, sqrt(1-0.85^2))
+y <- rnorm(100, x1 -  x2)
+pairs(data.frame(x1,x2,y))
+```
+
+*5M3
+High divorce rate could cause high marriage rate as a divorce results in two individuals becoming eligible to remarry. Multivariate linear regression could assess this relationship by regressing marriage rate against divorce rate and remarriae rate - we may expect the effect of divorce to disappear once remarriage rate is included in the model.
+
+*5M4
+```{r}
+#Code taken from rpubs
+d <- WaffleDivorce
+d$LDS <- c(0.0077, 0.0453, 0.0610, 0.0104, 0.0194, 0.0270, 0.0044, 0.0057, 0.0041, 0.0075, 0.0082, 0.0520, 0.2623, 0.0045, 0.0067, 0.0090, 0.0130, 0.0079, 0.0064, 0.0082, 0.0072, 0.0040, 0.0045, 0.0059, 0.0073, 0.0116, 0.0480, 0.0130, 0.0065, 0.0037, 0.0333, 0.0041, 0.0084, 0.0149, 0.0053, 0.0122, 0.0372, 0.0040, 0.0039, 0.0081, 0.0122, 0.0076, 0.0125, 0.6739, 0.0074, 0.0113, 0.0390, 0.0093, 0.0046, 0.1161)
+d$logLDS <- log(d$LDS)
+d$logLDS.s <- (d$logLDS - mean(d$logLDS)) / sd(d$logLDS)
+hist(d$LDS)
+l <- lm(Divorce ~ Marriage + MedianAgeMarriage + logLDS.s,data=d)
+summary(l)
+```
+
+*5M5
+
+Fit a linear regression of obesity rate against fuel cost, average daily exercise, number of times eating out in a month. Seperately you may regress exercise and eating our as outcome variables against fuel cost to see whether fuel cost influences them.
+
+*5H1
+```{r}
+data(foxes)
+d <- foxes
+
+m1 <- map(
+  alist(
+    weight ~ dnorm(mu, sigma),
+    mu <-  a + ba * area,
+    a ~ dnorm(0,5),
+    ba ~ dnorm(0,2),
+    sigma ~ dunif(0,10)
+  ),
+  data=d
+)
+
+area.seq <- seq(0,6,length.out = nrow(d))
+mu <- link(m1, data.frame(area = area.seq))
+mu.PI <- apply(mu, 2, PI)
+
+plot(weight~area, data=d, col = rangi2)
+abline(m1)
+shade(mu.PI, area.seq)
+```
+
+```{r}
+m2 <- map(
+  alist(
+    weight ~ dnorm(mu, sigma),
+    mu <-  a + bg * groupsize,
+    a ~ dnorm(0,5),
+    bg ~ dnorm(0,2),
+    sigma ~ dunif(0,10)
+  ),
+  data=d
+)
+
+grp.seq <- seq(1,9,length.out = nrow(d))
+mu <- link(m2, data.frame(groupsize = grp.seq))
+mu.PI <- apply(mu, 2, PI)
+
+plot(weight~groupsize, data=d, col = rangi2)
+abline(m2)
+shade(mu.PI, grp.seq)
+```
+There's no strong evidence of an association with either variable.
+
+*5H2
+```{r}
+m3 <- map(
+  alist(
+    weight ~ dnorm(mu, sigma),
+    mu <- a + bg * groupsize + ba * area,
+    a ~ dnorm(0,2),
+    bg ~ dnorm(0,2),
+    ba ~ dnorm(0,2),
+    sigma ~ dunif(0,10)
+  ), data=d
+)
+
+precis(m3)
+
+mu.area <- mean(d$area)
+grp.seq = seq(1,9,length.out=nrow(d))
+pred.data <- data.frame(
+  area = mu.area,
+  groupsize = grp.seq
+)
+
+mu <- link(m3, data = pred.data)
+mu.PI <- apply(mu,2,PI)
+mu.mean <- apply(mu,2,mean)
+
+grp.sim <-sim(m3,data = pred.data,n=10000)
+grp.pi <- apply(grp.sim,2,PI)
+
+
+plot(weight~groupsize,data=d, col = rangi2)
+lines(grp.seq, mu.mean)
+shade(mu.PI, grp.seq)
+shade(grp.pi, grp.seq)
+
+
+mu.grpsize <- mean(d$groupsize)
+area.seq = seq(1,6,length.out=nrow(d))
+pred.data2 <- data.frame(
+  area = area.seq,
+  groupsize = mu.grpsize
+)
+
+mu2 <- link(m3, data = pred.data2)
+mu2.PI <- apply(mu2,2,PI)
+mu2.mean <- apply(mu2,2,mean)
+
+area.sim <-sim(m3,data = pred.data2,n=10000)
+area.pi <- apply(area.sim,2,PI)
+
+
+plot(weight~area,data=d, col = rangi2)
+lines(area.seq, mu2.mean)
+shade(mu2.PI, area.seq)
+shade(area.pi, area.seq)
+
+
+```
+
+*5H3
+```{r}
+m4 <- map(
+  alist(
+    weight ~ dnorm(mu, sigma),
+    mu <- a + bf * avgfood + bg * groupsize,
+    a ~ dnorm(0,5),
+    bf ~ dnorm(0,2),
+    bg ~ dnorm(0,2),
+    sigma ~ dunif(0,10)
+  ),data=d
+)
+
+m5 <- map(
+  alist(
+    weight ~ dnorm(mu, sigma),
+    mu <- a + bf * avgfood + bg*groupsize + ba*area,
+    a ~ dnorm(0,2),
+    bf ~ dnorm(0,2),
+    bg ~ dnorm(0,2),
+    ba ~ dnorm(0,2),
+    sigma ~ dunif(0,10)
+  ),data=d
+)
+
+```
+
+```{r}
+precis(m4)
+```
+```{r}
+precis(m5)
+```
+In the first model, the effect of average food is large, but this effect becomes less when adding in the area variable. 
+
+```{r}
+pairs(data.frame(d$avgfood,d$area,d$weight))
+```
+Both area and avgfood are good predictors of weight, but they are strongly correlated with one another. I would select area as the variable to include in the model as the estimation interval is narrower, suggesting greater certainty in the estimate of the relationship.
