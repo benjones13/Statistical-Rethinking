@@ -1,0 +1,332 @@
+---
+title: "CH6 Exercises"
+author: "Ben Jones"
+date: "9 September 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*6E1
+1) The measure of uncertainty should be continuous 
+2) The measure of uncertainty should increase as the number of possible events increases - the more possibilities there are the less likely we can be about each occuring.
+3) The measure of uncertainty should be additive
+
+*6E2
+Entropy is defined on P178 as
+
+$$
+H(p) - E\log(p_i) = -\sum^{n}_{i=1}p_i\log(p_i)
+$$
+In this example, we have two events (heads or tails) with probabilities 0.7 and 0.3.
+
+So entropy is 
+```{r}
+p <- c(0.7,0.3)
+-sum(p * log(p))
+```
+
+*6E3
+This time, we have four events.
+
+```{r}
+p <- c(0.2,0.25,0.25,0.3)
+-sum(p * log(p))
+```
+The entropy is 1.38
+
+*6E4
+Now we have three events, each with probability $\frac{1}{3}$
+```{r}
+p <- c(1/3,1/3,1/3)
+-sum(p * log(p))
+```
+The entropy is 1.1
+
+*6M1
+
+$$AIC = D_{train} + 2p$$
+$$DIC = \bar{D} + (\bar{D} - \hat{D}) = \bar{D} + p_D$$
+$$WAIC = -2(lppd - p_{WAIC})$$
+
+AIC provides a measure of the predictive accuracy measured by the out of sample deviance. It is the most simple but most restrictive, and relies on: (i) flat priors; (ii) that the posterior is approximately multivariate Gaussian and (iii) that the sample size is much larger than the number of parameters.
+
+DIC on the other hand is able to handle non-informative priors, and when priors are informative it reduces to the AIC.
+
+Finally, WAIC is the most flexible of the three information criterion, but with the most complicated definition. It does not rely on a posterior having a multivariate Gaussian density. It is pointwise and so the uncertainty is considered on a point by point basis.
+
+*6M2
+Model selection involves using information criteria to select the best model for inference/prediction. Model averaging takes a weighted average (according to infromation criterion) of the results of each model. When employing model selection, we lose information about the relative performances compared to other models, which is particularly problematic when the improvements are small. 
+
+*6M3
+Models fit to different numbers of data points are not righs models with less data will usually have better deviance and information criterion because it has been asked to predict less. This is particularly dangerous as it may result in incorrectly concluding a superior model, or in the case of model averaging, it may result in incorrect predictions.
+
+*6M4
+The effective number of parameters will decrease as we introduce mmore concentrated priors. This is because concentrated priors result in less flexible models which reduce the risk of overfitting. In the case of the DIC, $\bar{D} - \hat{D}$ is analogous to the number of parameters. When a prior is informative, this value is decreased as there is less variation around the $\bar{D}$. In the case of WAIC, the effective number of parameters is the sum of the varuance of the log likelihood of each observation. With an informative prior, these values become more concentrated, thus reducing the variance and the number of effective parameters.
+
+*6M5
+A non informative prior essentially states that almost any value is equally feasible, and so the model is allowed to become more flexible as a result. When we introduce a more informative prior, we provide the model with some additional information, which makes the model less flexible meaning that it is less likely to fit too closely to the data (i.e. overfit)
+
+*6M6
+If we make our priors too informative, the model will not be influenced enough by the data - meaning the model will not be flexible enough to reflect what the data is indicating, resulting in underfitting.
+
+*Hard
+```{r}
+library(rethinking)
+data(Howell1)
+d <- Howell1
+d$age <- (d$age - mean(d$age))/sd(d$age)
+set.seed(1000)
+i <- sample(1:nrow(d), size = nrow(d)/2)
+d1 <- d[i,]
+d2 <- d[-i,]
+```
+
+```{r}
+d1$age.cen <- d1$age - mean(d1$age)
+
+m1 <- map(
+  alist(
+  height ~ dnorm(mu, sigma),
+  mu <- a + b1 * age.cen,
+  a ~ dnorm(140,30),
+  b1 ~ dnorm(0,50),
+  sigma ~ dunif(0,60)
+  ), data = d1
+)
+
+m2 <- map(
+  alist(
+  height ~ dnorm(mu, sigma),
+  mu <- a + b1 * age.cen + b2 * I(age.cen^2),
+  a ~ dnorm(140,30),
+  b1 ~ dnorm(0,50),
+  b2 ~ dnorm(0,50),
+  sigma ~ dunif(0,60)
+  ), data = d1
+)
+
+m3 <- map(
+  alist(
+  height ~ dnorm(mu, sigma),
+  mu <- a + b1 * age.cen + b2 * I(age.cen^2) + b3 * I(age.cen^3),
+  a ~ dnorm(140,30),
+  b1 ~ dnorm(0,50),
+  b2 ~ dnorm(0,50),
+  b3 ~ dnorm(0,50),
+  sigma ~ dunif(0,60)
+  ), data = d1
+)
+
+m4 <- map(
+  alist(
+  height ~ dnorm(mu, sigma),
+  mu <- a + b1 * age.cen + b2 * I(age.cen^2) + b3 * I(age.cen^3) + b4 * I(age.cen^4),
+  a ~ dnorm(140,30),
+  b1 ~ dnorm(0,50),
+  b2 ~ dnorm(0,50),
+  b3 ~ dnorm(0,50),
+  b4 ~ dnorm(0,50),
+  sigma ~ dunif(0,60)
+  ), data = d1
+)
+
+m5 <- map(
+  alist(
+  height ~ dnorm(mu, sigma),
+  mu <- a + b1 * age.cen + b2 * I(age.cen^2) + b3 * I(age.cen^3) + b4 * I(age.cen^4) + b5 * I(age.cen^5),
+  a ~ dnorm(140,30),
+  b1 ~ dnorm(0,50),
+  b2 ~ dnorm(0,50),
+  b3 ~ dnorm(0,50),
+  b4 ~ dnorm(0,50),
+  b5 ~ dnorm(0, 50),
+  sigma ~ dunif(0,60)
+  ), data = d1
+)
+
+m6 <- map(
+  alist(
+  height ~ dnorm(mu, sigma),
+  mu <- a + b1 * age.cen + b2 * I(age.cen^2) + b3 * I(age.cen^3) + b4 * I(age.cen^4) + b5 * I(age.cen^5) + b6 * I(age.cen^6),
+  a ~ dnorm(140,30),
+  b1 ~ dnorm(0,50),
+  b2 ~ dnorm(0,50),
+  b3 ~ dnorm(0,50),
+  b4 ~ dnorm(0,50),
+  b5 ~ dnorm(0, 50),
+  b6 ~ dnorm(0,50),
+  sigma ~ dunif(0,60)
+  ), data = d1
+)
+```
+
+*6H1
+```{r}
+(height.models <- compare(m1, m2, m3, m4, m5, m6, refresh = 0))
+```
+The models are ranked: 4,5,6,3,2,1 with weights of 54\%, 29\% and 18\% given to models 4,5 and 6, respectively. Models 1,2 and 3 are given no weight.
+
+*6H2
+```{r}
+age.seq <- seq(from = -2, to = 4, length.out = 30)
+height <- rep(0,30)
+```
+
+```{r}
+pred <- link(m1,  data.frame(height = height,age.cen = age.seq))
+mu <- apply(pred,2,mean)
+mu.PI <- apply(pred,2,PI, prob = 0.97)
+plot(height ~ age.cen,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+```{r}
+pred <- link(m2,  data.frame(height = height,age.cen = age.seq))
+mu <- apply(pred,2,mean)
+mu.PI <- apply(pred,2,PI, prob = 0.97)
+plot(height ~ age,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+```{r}
+pred <- link(m3,  data.frame(height = height,age.cen = age.seq))
+mu <- apply(pred,2,mean)
+mu.PI <- apply(pred,2,PI, prob = 0.97)
+plot(height ~ age,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+```{r}
+pred <- link(m4,  data.frame(height = height,age.cen = age.seq))
+mu <- apply(pred,2,mean)
+mu.PI <- apply(pred,2,PI, prob = 0.97)
+plot(height ~ age,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+```{r}
+pred <- link(m5,  data.frame(height = height,age.cen = age.seq))
+mu <- apply(pred,2,mean)
+mu.PI <- apply(pred,2,PI, prob = 0.97)
+plot(height ~ age,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+```{r}
+pred <- link(m6,  data.frame(height = height,age.cen = age.seq))
+mu <- apply(pred,2,mean)
+mu.PI <- apply(pred,2,PI, prob = 0.97)
+plot(height ~ age,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+*6H3
+```{r}
+ensemble <- ensemble(m1,m2,m3,m4,m5,m6, data = list(height = rep(0,30), age.cen = age.seq))
+mu <- apply(ensemble$link,2,mean)
+mu.PI <- apply(ensemble$link,2,PI, prob =  0.97)
+plot(height ~ age.cen,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+*6H4
+M1
+```{r}
+theta <- coef(m1)
+(D1 <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age, sd = theta[3], log = TRUE)))
+```
+M1
+```{r}
+theta <- coef(m1)
+(D1 <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age, sd = theta[3], log = TRUE)))
+```
+M2
+```{r}
+theta <- coef(m2)
+(D2 <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age + theta[3] * d2$age^2, sd = theta[4], log = TRUE)))
+```
+M3
+```{r}
+theta <- coef(m3)
+(D3 <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age + theta[3] * d2$age^2 + theta[4] * d2$age^3, sd = theta[5], log = TRUE)))
+```
+M4
+```{r}
+theta <- coef(m4)
+(D4 <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age + theta[3] * d2$age^2 + 
+                        theta[4] * d2$age^3 + theta[5] * d2$age^4 , sd = theta[6], log = TRUE)))
+```
+M5
+```{r}
+theta <- coef(m5)
+(D5 <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age + theta[3] * d2$age^2 + 
+                        theta[4] * d2$age^3 + theta[5] * d2$age^4 + theta[6] * d2$age^5 , sd = theta[7], log = TRUE)))
+```
+M6
+```{r}
+theta <- coef(m6)
+(D6 <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age + theta[3] * d2$age^2 + 
+                        theta[4] * d2$age^3 + theta[5] * d2$age^4 + 
+                        theta[6] * d2$age^5 + theta[7] * d2$age^6 , sd = theta[8], log = TRUE)))
+```
+
+*6H5
+```{r}
+D <- c(D1,D2,D3,D4,D5,D6)
+D
+D <- D - min(D)
+D
+WAIC <- c(WAIC(m1), WAIC(m2),WAIC(m3),WAIC(m4),WAIC(m5),WAIC(m6))
+WAIC <- WAIC - min(WAIC)
+WAIC
+D
+```
+Calculating the out of sample deviance suggested that model 6 was the best fit, whereas the WAIC suggested model 4. However, the difference was very small and so we can still deem the WAIC to have performed well. Both methods identified models 4,5 and 6 as superior to 1,2 and 3.
+
+*6H6
+```{r}
+m <- map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b1 * age + b2 * I(age^2) + b3 * I(age^3) + b4 * I(age^4) + b5 * I(age^5) + b6 * I(age^6),
+    a ~ dnorm(0,100),
+    b1 ~ dnorm(0,5),
+    b2 ~ dnorm(0,5),
+    b3 ~ dnorm(0,5),
+    b4 ~ dnorm(0,5),
+    b5 ~ dnorm(0,5),
+    b6 ~ dnorm(0,5),
+    sigma ~ dunif(0,100)
+  ), data = d1
+)
+precis(m)
+```
+```{r}
+pred <- link(m,  data.frame(height = height,age = age.seq))
+mu <- apply(pred,2,mean)
+mu.PI <- apply(pred,2,PI, prob = 0.97)
+plot(height ~ age,d1,col=rangi2)
+lines(age.seq, mu)
+shade(mu.PI, age.seq)
+```
+
+```{r}
+theta <- coef(m)
+(D <- -2 * sum(dnorm(d2$height, mean = theta[1] + theta[2] * d2$age + theta[3] * d2$age^2 + 
+                        theta[4] * d2$age^3 + theta[5] * d2$age^4 + 
+                        theta[6] * d2$age^5 + theta[7] * d2$age^6 , sd = theta[8], log = TRUE)))
+```
+```{r}
+D - D4
+```
+The model with regularised priors does slightly better than the model with flat priors. This is an example of regularising priors reducing the deviance by allowing the model to learn slightly less from the data.
