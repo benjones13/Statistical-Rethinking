@@ -1,0 +1,403 @@
+---
+title: "CH7 Exercises"
+author: "Ben Jones"
+date: "30 September 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+*7E1
+a) heat
+b) socioeconomic background
+c) oxygen
+
+*7E2
+1) yes - heat and dryness interact
+2) cylinders \textbf{or} fuel injector - no interaction
+3) interaction 
+4) interaction
+
+*7E3
+1) $C_i = \alpha + \beta_H  H_i + \beta_D  D_i + \beta_{HD} H_i D_i$
+2) $S_i = \alpha + \beta_C C_i + \beta_F  F_i$
+3) $P_i = \alpha + \beta_{Pa}  Pa_i + \beta_F  F_i + \beta_{PaF} Pa_i F_i$
+4) $I_i = \alpha + \beta_S  S_i + \beta_A  A_i + \beta_{SA} S_i A_i$
+
+*7M1
+The interaction between shade, water and temperature is such that when temerature is warm there is no effect from either shade or from water, but when temperature is lower the effect of water and temperature is evident. This means that regardless of water and shade conditions, temperature must be low in order to produce blooms.
+
+*7M2
+Let $T_i = 0$ if temperature is hot. Then
+$B_i = T_i(\alpha + \beta_W W_i + \beta_S S_i + \beta_{SW}S_i W_i)$
+
+*7M3 
+We postulate that raven population is positively associated with wolf population. However it is also likely that there is an interaction between wolf population and availability of prey. As a model
+
+$R_i = \alpha + \beta_W W_i + \beta_P P_i + \beta_{WP}W_i P_i$
+As in the absence of prey, wolves will not be able to feed as much, meaning both fewer wolves and thus fewer ravens.
+
+*7H1
+```{r}
+library(rethinking)
+data(tulips)
+d <- tulips
+```
+
+```{r}
+d$bedb <- ifelse(d$bed == "b",1,0)
+d$bedc <- ifelse(d$bed == "c",1,0)
+d$water.c = d$water - mean(d$water)
+d$shade.c = d$shade - mean(d$shade)
+
+m1 <- map(
+  alist(
+    blooms ~ dnorm(mu, sigma),
+    mu <- a + bW * water.c + bS * shade.c + bB * bedb + bC * bedc + bWS * water.c * shade.c,
+    a ~ dnorm(130,100),
+    bW ~ dnorm(0,100),
+    bS ~ dnorm(0, 100),
+    bB ~ dnorm(0, 100),
+    bC ~ dnorm(0, 100),
+    bWS ~ dnorm(0,100),
+    sigma ~ dunif(0, 100)
+  ), data = d,
+  start = list(a = mean(d$blooms), bW = 0, bS = 0, bB = 0, bC = 0, bWS = 0, sigma = sd(d$blooms))
+  )
+
+m2 <- map(
+  alist(
+    blooms ~ dnorm(mu, sigma),
+    mu <- a + bW * water.c + bS * shade.c + bWS * water.c * shade.c,
+    a ~ dnorm(130,100),
+    bW ~ dnorm(0,100),
+    bS ~ dnorm(0, 100),
+    bWS ~ dnorm(0,100),
+    sigma ~ dunif(0, 100)
+  ), data = d,
+  start = list(a = mean(d$blooms), bW = 0, bS = 0, bWS = 0, sigma = sd(d$blooms))
+  )
+```
+
+
+*7H2
+```{r}
+compare(m1,m2)
+```
+
+```{r}
+coeftab(m1,m2)
+```
+
+The model including the bed variable has most of the weight assigned to it, and has the smaller WAIC, suggesting it  is the preferable model. Looking at the coefficients, it appears that both beds b and c had a lot more blooms than bed a. 
+
+```{r}
+post <- extract.samples(m1)
+head(post)
+postA <- post$a
+postB <- post$a + post$bB
+postC <- post$a + post$bC
+dens(postA, col = "blue", xlim = c(min(postA),max(postC)))
+dens(postB, col = "red", add = T)
+dens(postC, col = "green", add = T)
+```
+We can see that B and C had a similar number of blooms, which were both substantially more than bed A.
+
+
+*7H3
+```{r}
+data(rugged)
+d <- rugged
+d <- d[complete.cases(d$rgdppc_2000),]
+d$lgdp <- log(d$rgdppc_2000)
+d2 <- d[d$country != "Seychelles",]
+m3 <- map(
+  alist(
+    lgdp ~ dnorm(mu, sigma),
+    mu <- a + bA * cont_africa + bR * rugged + bAR * cont_africa * rugged,
+    a ~ dnorm(8,100),
+    bA ~ dnorm(0,1),
+    bR ~ dnorm(0,1),
+    bAR ~ dnorm(0,1),
+    sigma ~ dunif(0,10)
+  ),
+  data = d
+)
+
+m4 <- map(
+  alist(
+    lgdp ~ dnorm(mu, sigma),
+    mu <- a + bA * cont_africa + bR * rugged + bAR * cont_africa * rugged,
+    a ~ dnorm(8,100),
+    bA ~ dnorm(0,1),
+    bR ~ dnorm(0,1),
+    bAR ~ dnorm(0,1),
+    sigma ~ dunif(0,10)
+  ),
+  data = d2
+)
+
+coeftab(m3,m4)
+precis(m3)
+precis(m4)
+```
+
+a) The interaction term has gotten smaller bu remains fairly convincingly above zero in the limits of the credible interval.
+
+b)
+```{r}
+rugged.seq <- seq(from = -1, to =  8, by = 0.25)
+mu.Africa <- link(m3, data = data.frame(cont_africa = 1, rugged = rugged.seq))
+mu.Africa.mean <- apply(mu.Africa, 2, mean)
+mu.Africa.PI <- apply(mu.Africa,2,PI, prob = 0.97)
+
+mu.NotAfrica <- link(m3, data = data.frame(cont_africa = 0, rugged = rugged.seq))
+mu.NotAfrica.mean <- apply(mu.NotAfrica, 2, mean)
+mu.NotAfrica.PI <- apply(mu.NotAfrica,2,PI, prob = 0.97)
+
+mu.AfricaS <- link(m4, data = data.frame(cont_africa = 1, rugged = rugged.seq))
+mu.AfricaS.mean <- apply(mu.AfricaS, 2, mean)
+mu.AfricaS.PI <- apply(mu.AfricaS,2,PI, prob = 0.97)
+
+mu.NotAfricaS <- link(m4, data = data.frame(cont_africa = 0, rugged = rugged.seq))
+mu.NotAfricaS.mean <- apply(mu.NotAfricaS, 2, mean)
+mu.NotAfricaS.PI <- apply(mu.NotAfricaS,2,PI, prob = 0.97)
+
+d.A1 <- d[d$cont_africa == 1,]
+plot(lgdp ~ rugged, data = d.A1,
+      col = rangi2, ylab = "Log GDP 2000", xlab = "Ruggedness")
+mtext("African nations, including Seychelles")
+lines(rugged.seq, mu.Africa.mean)
+shade(mu.Africa.PI, rugged.seq, col = col.alpha(rangi2,0.3))
+
+d.A0 <- d[d$cont_africa == 0,]
+plot(lgdp ~ rugged, data = d.A0,
+      col = rangi2, ylab = "Log GDP 2000", xlab = "Ruggedness")
+mtext("Non-African nations, including Seychelles")
+lines(rugged.seq, mu.NotAfrica.mean)
+shade(mu.NotAfrica.PI, rugged.seq, col = col.alpha(rangi2,0.3))
+
+d2.A1 <- d2[d2$cont_africa == 1,]
+plot(lgdp ~ rugged, data = d2.A1,
+      col = rangi2, ylab = "Log GDP 2000", xlab = "Ruggedness")
+mtext("African nations, excluding Seychelles")
+lines(rugged.seq, mu.AfricaS.mean)
+shade(mu.AfricaS.PI, rugged.seq, col = col.alpha(rangi2,0.3))
+
+d2.A0 <- d2[d2$cont_africa == 0,]
+plot(lgdp ~ rugged, data = d2.A0,
+      col = rangi2, ylab = "Log GDP 2000", xlab = "Ruggedness")
+mtext("Non-African nations, excluding Seychelles")
+lines(rugged.seq, mu.NotAfricaS.mean)
+shade(mu.NotAfricaS.PI, rugged.seq, col = col.alpha(rangi2,0.3))
+```
+Without the Seychelles the slope for the african nations is slightly less steep and more uncertain at the higher levels of ruggedness, but the relationship does remain.
+
+
+c)
+
+```{r}
+m5 <- map(alist(
+  lgdp ~ dnorm(mu, sigma),
+  mu <- a + bR * rugged,
+  a ~ dnorm(8, 100),
+  bR ~ dnorm(0, 1),
+  sigma ~ dunif(0, 10)
+), data = d2
+)
+
+m6 <- map(alist(
+  lgdp ~ dnorm(mu, sigma),
+  mu <- a + bA * cont_africa + bR * rugged,
+  a ~ dnorm(8, 100),
+  bA ~ dnorm(0, 1),
+  bR ~ dnorm(0,1),
+  sigma ~ dunif(0,10)
+), data = d2)
+
+m7 <- map(alist(
+  lgdp ~ dnorm(mu, sigma),
+  mu <- a + bA * cont_africa + bR * rugged + bAR * rugged * cont_africa,
+  a ~ dnorm(8, 100),
+  bA ~ dnorm(0, 1),
+  bR ~ dnorm(0,1),
+  bAR ~ dnorm(0,1),
+  sigma ~ dunif(0,10)
+), data = d2)
+
+compare(m5,m6,m7)
+```
+The majority of the weight is given to the model which includes the interaction term. None is given to the model which only includes ruggedness.
+
+Now do the same for the data, including the Seychelles
+
+```{r}
+m8 <- map(alist(
+  lgdp ~ dnorm(mu, sigma),
+  mu <- a + bR * rugged,
+  a ~ dnorm(8, 100),
+  bR ~ dnorm(0, 1),
+  sigma ~ dunif(0, 10)
+), data = d
+)
+
+m9 <- map(alist(
+  lgdp ~ dnorm(mu, sigma),
+  mu <- a + bA * cont_africa + bR * rugged,
+  a ~ dnorm(8, 100),
+  bA ~ dnorm(0, 1),
+  bR ~ dnorm(0,1),
+  sigma ~ dunif(0,10)
+), data = d)
+
+m10 <- map(alist(
+  lgdp ~ dnorm(mu, sigma),
+  mu <- a + bA * cont_africa + bR * rugged + bAR * rugged * cont_africa,
+  a ~ dnorm(8, 100),
+  bA ~ dnorm(0, 1),
+  bR ~ dnorm(0,1),
+  bAR ~ dnorm(0,1),
+  sigma ~ dunif(0,10)
+), data = d)
+compare(m8,m9,m10)
+```
+The model with Seychelles includes even more weight for the interaction model than that without Seychelles.
+```{r}
+dA.predict = list(lgdp = rep(0,37),
+                  rugged = rugged.seq,
+                  cont_africa = rep(1,37)
+                  )
+
+dNA.predict = list(lgdp = rep(0,37),
+                    rugged = rugged.seq,
+                    cont_africa = rep(0,37))
+
+
+ruggedness.ensembleNSA <- ensemble(m5,m6,m7,data=dA.predict)
+ruggedness.ensembleNSNA <- ensemble(m5,m6,m7,data=dNA.predict)
+
+#Africa, no seychelles
+mu.AfricaNS <- apply(ruggedness.ensembleNSA$link, 2, mean)
+PI.AfricaNS <- apply(ruggedness.ensembleNSA$link, 2, PI, prob = 0.97)
+#not Africa, no Seychelles
+mu.NAfricaNS <- apply(ruggedness.ensembleNSNA$link, 2, mean)
+PI.NAfricaNS <- apply(ruggedness.ensembleNSNA$link, 2, PI, prob = 0.97)
+
+ruggedness.ensembleAS <- ensemble(m8,m9,m10, data = dA.predict)
+ruggedness.ensembleNAS <- ensemble(m8, m9, m10, data = dA.predict)
+#Africa, Seychelles
+mu.AfricaS <- apply(ruggedness.ensembleAS$link, 2, mean)
+PI.AfricaS <- apply(ruggedness.ensembleAS$link, 2, PI, prob = 0.97)
+
+#No africa, seychelles
+mu.NAfricaS <- apply(ruggedness.ensembleNAS$link, 2, mean)
+PI.NAfricaS <- apply(ruggedness.ensembleNAS$link,2,PI,prob = 0.97)
+
+par(mfrow = c(2,2))
+#Africa, no seychelles
+plot(lgdp~rugged, col = rangi2, data = d2[d2$cont_africa == 1,])
+lines(rugged.seq, mu.AfricaNS)
+shade(PI.AfricaNS, rugged.seq)
+mtext("Africa, no Seychelles")
+#Not africa, no Seychelles
+plot(lgdp ~ rugged, col = rangi2, data = d2[d2$cont_africa == 0,])
+lines(rugged.seq, mu.NAfricaNS)
+shade(PI.NAfricaNS, rugged.seq)
+mtext("Not africa, no seychelles")
+#Africa, with seychelles
+plot(lgdp ~ rugged, col = rangi2, data = d[d$cont_africa == 1,])
+lines(rugged.seq, mu.AfricaS)
+shade(PI.AfricaS, rugged.seq)
+mtext("Africa, with seychelles")
+#Not africa, with seychelles
+plot(lgdp ~ rugged, col = rangi2, data = d[d$cont_africa == 0,])
+lines(rugged.seq, mu.NAfricaS)
+shade(PI.NAfricaS, rugged.seq)
+mtext("Not africa, with seychelles")
+```
+When we exclude the seychelles from the ensemble, we see even less inteaction effect, as more weight is given to the model without interaction effect.
+
+*7H4
+```{r}
+data(nettle)
+d <- nettle
+
+d$lang.per.cap <- d$num.lang/d$k.pop
+d$llang.per.cap <- log(d$lang.per.cap)
+d$larea <- log(d$area)
+
+m1 <- map(
+  alist(
+    llang.per.cap ~ dnorm(mu, sigma),
+    mu <- a + bG * mean.growing.season + bA * larea,
+    a ~ dnorm(-5,5),
+    bG ~ dnorm(0,5),
+    bA ~ dnorm(0,5),
+    sigma ~ dunif(0,10)
+  ), data =d
+)
+precis(m1)
+```
+The coefficient for growing season is positively associated with languages per capita, and the confidence region is comfortably above 0, providing evidence of a positive reltionship that growing season increases the languages per capita.
+b)
+```{r}
+m2 <- map(
+  alist(
+    llang.per.cap ~ dnorm(mu, sigma),
+    mu <- a + bS * sd.growing.season + bA * larea,
+    a ~ dnorm(-5,5),
+    bS ~ dnorm(0,5),
+    bA ~ dnorm(0,5), 
+    sigma ~ dunif(0,10)
+  ), data = d
+)
+precis(m2)
+```
+Whilst the coefficient for sd of growing season is negative, this estimate is not convinvingly below zero and so doesn't provide convincing evidence of a negative association.
+
+c)
+```{r}
+m3 <- map(
+  alist(
+    llang.per.cap ~ dnorm(mu, sigma),
+    mu <- a + bS * sd.growing.season + bG * mean.growing.season + bSG * sd.growing.season * mean.growing.season + bA * larea,
+    a ~ dnorm(-5,5),
+    bS ~ dnorm(0,5),
+    bG ~ dnorm(0,5),
+    bSG ~ dnorm(0, 5),
+    bA ~ dnorm(0, 5),
+    sigma ~ dunif(0,10)
+  ), data = d
+)
+precis(m3)
+compare(m1,m2,m3)
+```
+
+Comparing the models, we can see that the vast majority of the weight is given to the model with an interaction term, implying that the interaction is important. We should produce some triptych plots to aid interpretation here.
+
+First, we should discretise each of the variables into three, then fix them and predict the outcome whilst letting the other variable in the interaction vary. We can do this by standardising the variables
+
+```{r}
+d$sd.growing.season.c <- (d$sd.growing.season - mean(d$sd.growing.season))
+d$SD.cut <- cut(
+  d$sd.growing.season,
+  breaks = quantile(d$sd.growing.season, prob = c(0,1/3,2/3,1)),
+  include.lowest = T, 
+  dig.lab = 2
+)
+growing.seq <- seq(0,12,length.out = 74)
+for(i in levels(d$SD.cut)){
+  dt <- d[d$SD.cut == i,]
+  plot(llang.per.cap ~ mean.growing.season, data = dt, col = rangi2,
+       main = paste("SD growing season =", i), xlab = "Mean growing season")
+  mu <- link(m3, data = data.frame(sd.growing.season = mean(dt$sd.growing.season), mean.growing.season = seq(0,12,length.out = nrow(dt)), larea = dt$larea))
+  mu.mean <- apply(mu,2,mean)
+  mu.PI <- apply(mu,2,PI, prob = 0.97)
+  lines(seq(0,12,length.out = nrow(dt)), mu.mean)
+  lines(seq(0,12,length.out = nrow(dt)), mu.PI[1,],lty = 2)
+  lines(seq(0,12,length.out = nrow(dt)), mu.PI[2,], lty = 2)
+}
+```
+From this we can infer that at lower SD growing seasons, mean growing season has a greater effect on languages per capita. This effect diminishes as sd of growing season gets larger.
